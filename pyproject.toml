@@ -1,12 +1,12 @@
 [project]
 name = "ccost"
-version = "0.1.0"
-description = "See what Claude Code actually costs you — a fast, zero-config cost & cache-waste analyzer."
+version = "0.2.0"
+description = "See what your AI coding agents cost you — a fast, zero-config cost & cache-waste analyzer for Claude Code and Codex."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
 authors = [{ name = "Naman Goyal" }]
-keywords = ["claude", "claude-code", "cost", "tokens", "cli", "usage", "anthropic"]
+keywords = ["claude", "claude-code", "codex", "openai", "cost", "tokens", "cli", "usage", "anthropic"]
 classifiers = [
     "Environment :: Console",
     "Programming Language :: Python :: 3",

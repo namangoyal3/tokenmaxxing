@@ -27,6 +27,7 @@ class Record:
     cache_read: int
     cache_write_5m: int
     cache_write_1h: int
+    source: str = "claude"
 
     @property
     def total_tokens(self) -> int:
@@ -39,11 +40,21 @@ class Record:
         )
 
 
+SOURCES = ("claude", "codex")
+
+
 def default_dir() -> Path:
     """Where Claude Code stores logs. Respects CLAUDE_CONFIG_DIR."""
     env = os.environ.get("CLAUDE_CONFIG_DIR")
     base = Path(env) if env else Path.home() / ".claude"
     return base / "projects"
+
+
+def codex_dir() -> Path:
+    """Where the OpenAI Codex CLI stores session rollouts."""
+    env = os.environ.get("CODEX_HOME")
+    base = Path(env) if env else Path.home() / ".codex"
+    return base / "sessions"
 
 
 def _project_name(rec: dict, file_path: Path) -> str:
@@ -112,9 +123,7 @@ def _iter_records(file_path: Path) -> Iterator[tuple[Record, str]]:
         yield rec, key
 
 
-def load_records(root: Path | None = None, since: datetime | None = None) -> list[Record]:
-    """Load and dedupe all usage records under `root` (default Claude dir)."""
-    root = root or default_dir()
+def _load_claude(root: Path, since: datetime | None) -> list[Record]:
     seen: set[str] = set()
     out: list[Record] = []
     if not root.exists():
@@ -127,5 +136,93 @@ def load_records(root: Path | None = None, since: datetime | None = None) -> lis
             if since and rec.ts < since:
                 continue
             out.append(rec)
+    return out
+
+
+def _codex_record(file_path: Path) -> Record | None:
+    """One record per Codex rollout: its final (cumulative) token totals.
+
+    Codex writes a running `total_token_usage` on every turn, so we keep the
+    largest one — the session total — rather than summing turns.
+    """
+    try:
+        text = file_path.read_text(errors="replace")
+    except OSError:
+        return None
+    meta_ts = meta_cwd = session_id = None
+    model = "unknown"
+    best = None  # the total_token_usage dict with the most total_tokens
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(obj, dict):
+            continue
+        payload = obj.get("payload") or {}
+        t = obj.get("type")
+        if t == "session_meta":
+            meta_ts = payload.get("timestamp") or obj.get("timestamp")
+            meta_cwd = payload.get("cwd")
+            session_id = payload.get("id")
+        elif t == "turn_context" and payload.get("model"):
+            model = payload["model"]
+        info = payload.get("info") if isinstance(payload, dict) else None
+        if isinstance(info, dict):
+            tu = info.get("total_token_usage")
+            if isinstance(tu, dict):
+                if best is None or tu.get("total_tokens", 0) > best.get("total_tokens", 0):
+                    best = tu
+    if not best:
+        return None
+    ts = _parse_ts(meta_ts) or _parse_ts(None)
+    if ts is None:
+        return None
+    cached = int(best.get("cached_input_tokens", 0) or 0)
+    total_in = int(best.get("input_tokens", 0) or 0)
+    return Record(
+        ts=ts,
+        model=model,
+        project=(Path(meta_cwd).name if meta_cwd else "unknown"),
+        session=session_id or file_path.stem,
+        branch="",
+        input=max(total_in - cached, 0),  # OpenAI input_tokens includes cached
+        output=int(best.get("output_tokens", 0) or 0),
+        cache_read=cached,
+        cache_write_5m=0,  # OpenAI implicit caching has no write premium
+        cache_write_1h=0,
+        source="codex",
+    )
+
+
+def _load_codex(root: Path, since: datetime | None) -> list[Record]:
+    out: list[Record] = []
+    if not root.exists():
+        return out
+    for file_path in root.rglob("rollout-*.jsonl"):
+        rec = _codex_record(file_path)
+        if rec is None:
+            continue
+        if since and rec.ts < since:
+            continue
+        out.append(rec)
+    return out
+
+
+def load_records(
+    sources=SOURCES,
+    since: datetime | None = None,
+    claude_root: Path | None = None,
+    codex_root: Path | None = None,
+) -> list[Record]:
+    """Load usage records from every requested source, sorted by time."""
+    out: list[Record] = []
+    if "claude" in sources:
+        out += _load_claude(claude_root or default_dir(), since)
+    if "codex" in sources:
+        out += _load_codex(codex_root or codex_dir(), since)
     out.sort(key=lambda r: r.ts)
     return out

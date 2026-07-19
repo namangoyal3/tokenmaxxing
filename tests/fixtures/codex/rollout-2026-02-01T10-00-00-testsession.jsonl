@@ -1,0 +1,5 @@
+{"type":"session_meta","timestamp":"2026-02-01T10:00:00.000Z","payload":{"id":"cx-1","timestamp":"2026-02-01T10:00:00.000Z","cwd":"/Users/x/proj-codex","cli_version":"0.1"}}
+{"type":"turn_context","payload":{"model":"gpt-5","cwd":"/Users/x/proj-codex"}}
+{"type":"event_msg","payload":{"info":{"total_token_usage":{"input_tokens":30000,"cached_input_tokens":10000,"output_tokens":2000,"total_tokens":50000}}}}
+{"type":"response_item","payload":{"role":"assistant","content":"..."}}
+{"type":"event_msg","payload":{"info":{"total_token_usage":{"input_tokens":100000,"cached_input_tokens":40000,"output_tokens":5000,"total_tokens":105000}}}}

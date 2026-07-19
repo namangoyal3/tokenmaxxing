@@ -10,9 +10,9 @@ from pathlib import Path
 from rich.console import Console
 
 from . import __version__, html, report
-from .parse import load_records
+from .parse import SOURCES, load_records
 
-COMMANDS = ("summary", "daily", "monthly", "projects", "models", "html", "json")
+COMMANDS = ("summary", "daily", "monthly", "projects", "models", "sources", "html", "json")
 
 
 def _load_pricing(path: str | None) -> dict | None:
@@ -34,6 +34,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="ccost", description="See what Claude Code actually costs you.")
     p.add_argument("command", nargs="?", default="summary", choices=COMMANDS,
                    help="report to show (default: summary)")
+    p.add_argument("--source", choices=(*SOURCES, "all"), default="all",
+                   help="which agent's logs to read (default: all)")
     p.add_argument("--dir", type=Path, help="Claude projects dir (default: ~/.claude/projects)")
     p.add_argument("--days", type=int, help="only include the last N days")
     p.add_argument("--pricing", help="JSON file overriding model prices")
@@ -45,7 +47,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     overrides = _load_pricing(args.pricing)
-    records = load_records(args.dir, since=_since(args.days))
+    sources = SOURCES if args.source == "all" else (args.source,)
+    records = load_records(sources=sources, since=_since(args.days), claude_root=args.dir)
     console = Console()
 
     if args.command == "json":
@@ -53,10 +56,10 @@ def main(argv: list[str] | None = None) -> int:
             "count": len(records),
             "records": [
                 {
-                    "ts": r.ts.isoformat(), "model": r.model, "project": r.project,
-                    "session": r.session, "input": r.input, "output": r.output,
-                    "cache_read": r.cache_read, "cache_write_5m": r.cache_write_5m,
-                    "cache_write_1h": r.cache_write_1h,
+                    "ts": r.ts.isoformat(), "source": r.source, "model": r.model,
+                    "project": r.project, "session": r.session,
+                    "input": r.input, "output": r.output, "cache_read": r.cache_read,
+                    "cache_write_5m": r.cache_write_5m, "cache_write_1h": r.cache_write_1h,
                 }
                 for r in records
             ],
@@ -75,6 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         "monthly": report.print_monthly,
         "projects": report.print_projects,
         "models": report.print_models,
+        "sources": report.print_sources,
     }
     dispatch[args.command](console, records, overrides)
     return 0

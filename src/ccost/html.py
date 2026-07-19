@@ -38,6 +38,8 @@ def render(records: list[Record], overrides) -> str:
     hit = total.cache_hit_rate * 100
     span = (f"{records[0].ts:%Y-%m-%d} → {records[-1].ts:%Y-%m-%d}" if records else "—")
     gen = datetime.now().strftime("%Y-%m-%d %H:%M")
+    srcs = {r.source for r in records}
+    label = "Claude Code spend" if srcs == {"claude"} else "Codex spend" if srcs == {"codex"} else "AI coding spend"
 
     return f"""<!doctype html><html lang=en><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1">
@@ -60,7 +62,7 @@ tr:last-child td{{border-bottom:none}}.num{{text-align:right;font-variant-numeri
 footer{{color:var(--dim);font-size:.8rem;margin-top:2.5rem;text-align:center}}
 footer a{{color:var(--acc);text-decoration:none}}
 </style></head><body><div class=wrap>
-<h1><span>ccost</span> — Claude Code spend</h1>
+<h1><span>ccost</span> — {label}</h1>
 <p class=sub>{span} · generated {gen}</p>
 <div class=cards>
 <div class=card><div class=k>Total cost</div><div class="v money">{_money(total.cost)}</div></div>
@@ -69,6 +71,7 @@ footer a{{color:var(--acc);text-decoration:none}}
 <div class=card><div class=k>Cache hit rate</div><div class="v {'good' if hit>=80 else 'ok' if hit>=50 else 'bad'}">{hit:.0f}%</div></div>
 <div class=card><div class=k>Spent on cache writes</div><div class=v>{_money(write_cost)}</div></div>
 </div>
+{_table("By source", _group(records, lambda r: r.source, overrides), "Source") if len({r.source for r in records}) > 1 else ""}
 {_table("By model", _group(records, lambda r: short_model(r.model), overrides), "Model")}
 {_table("By project", _group(records, lambda r: r.project, overrides), "Project")}
 {_table("Daily", _group(records, lambda r: f"{r.ts:%Y-%m-%d}", overrides), "Date", reverse=False)}

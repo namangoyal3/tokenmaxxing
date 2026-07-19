@@ -7,7 +7,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def test_dedupe_and_extraction():
-    recs = load_records(FIXTURES)
+    recs = load_records(sources=("claude",), claude_root=FIXTURES)
     # Two assistant turns share (msg_1, req_1) -> deduped to one; user line ignored.
     assert len(recs) == 2
     assert {r.project for r in recs} == {"proj-a", "proj-b"}
@@ -15,14 +15,14 @@ def test_dedupe_and_extraction():
 
 
 def test_cache_breakdown_parsed():
-    a = next(r for r in load_records(FIXTURES) if r.project == "proj-a")
+    a = next(r for r in load_records(sources=("claude",), claude_root=FIXTURES) if r.project == "proj-a")
     assert a.cache_write_5m == 4000
     assert a.cache_write_1h == 1000
     assert a.cache_read == 2000
 
 
 def test_total_cost_matches_hand_math():
-    recs = load_records(FIXTURES)
+    recs = load_records(sources=("claude",), claude_root=FIXTURES)
     total = sum(
         pricing.cost_usd(r.model, r.input, r.output, r.cache_read, r.cache_write_5m, r.cache_write_1h)
         for r in recs

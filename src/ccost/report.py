@@ -124,7 +124,9 @@ def print_summary(console: Console, records: list[Record], overrides) -> None:
     header.add_row(Text("Tokens", style="dim"), _tokens(total.total_tokens))
     header.add_row(Text("Period", style="dim"),
                    f"{start:%Y-%m-%d} → {end:%Y-%m-%d}  ({days}d, {_money(total.cost / days)}/day)")
-    console.print(Panel(header, title="[bold]ccost[/] · Claude Code spend", border_style="cyan"))
+    srcs = {r.source for r in records}
+    label = "Claude Code spend" if srcs == {"claude"} else "Codex spend" if srcs == {"codex"} else "AI coding spend"
+    console.print(Panel(header, title=f"[bold]ccost[/] · {label}", border_style="cyan"))
 
     # The differentiator: cache economics. Cache writes cost 1.25–2x input; reads
     # cost 0.1x. A low hit rate means you're paying to rebuild context you could reuse.
@@ -146,6 +148,8 @@ def print_summary(console: Console, records: list[Record], overrides) -> None:
         cache_lines.append("Healthy reuse — you're getting cache back at 0.1x.", style="green")
     console.print(Panel(cache_lines, title="[bold]Cache economics[/]", border_style="magenta"))
 
+    if len({r.source for r in records}) > 1:
+        console.print(_breakdown_table("By source", _group(records, lambda r: r.source, overrides), "Source"))
     console.print(_breakdown_table("By model", _group(records, lambda r: short_model(r.model), overrides), "Model"))
     projects = _group(records, lambda r: r.project, overrides)
     console.print(_breakdown_table("By project (top 10)",
@@ -174,3 +178,7 @@ def print_projects(console: Console, records: list[Record], overrides) -> None:
 
 def print_models(console: Console, records: list[Record], overrides) -> None:
     console.print(_breakdown_table("By model", _group(records, lambda r: short_model(r.model), overrides), "Model"))
+
+
+def print_sources(console: Console, records: list[Record], overrides) -> None:
+    console.print(_breakdown_table("By source", _group(records, lambda r: r.source, overrides), "Source"))
