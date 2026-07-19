@@ -1,13 +1,14 @@
-<h1 align="center">ccost</h1>
+<h1 align="center">tokenmaxxing</h1>
 
 <p align="center">
-  <b>See what your AI coding agents actually cost you.</b><br>
-  A fast, zero-config CLI that turns your local <b>Claude Code</b> &amp; <b>Codex</b> logs into a beautiful cost report —<br>
-  by agent, model, project, day — and shows you the <b>cache waste</b> nobody else surfaces.
+  <b>Max out your Claude Code &amp; Codex tokens — don't waste the quota you paid for.</b><br>
+  A fast, zero-config CLI (the <code>ccost</code> command) over your local agent logs: see your live
+  <b>5-hour window</b>, a token-efficiency <b>score</b>, cost by agent/model/project, and the
+  <b>cache waste</b> nobody else surfaces.
 </p>
 
 <p align="center">
-  <code>uvx --from git+https://github.com/namangoyal3/ccost ccost</code>
+  <code>uvx --from git+https://github.com/namangoyal3/tokenmaxxing ccost</code>
 </p>
 
 <p align="center">
@@ -105,17 +106,17 @@ left on the table.
 
 ```bash
 # one-off run
-uvx --from git+https://github.com/namangoyal3/ccost ccost
+uvx --from git+https://github.com/namangoyal3/tokenmaxxing ccost
 
 # install as a persistent tool
-uv tool install git+https://github.com/namangoyal3/ccost
+uv tool install git+https://github.com/namangoyal3/tokenmaxxing
 ccost
 ```
 
 Or with pip:
 
 ```bash
-pip install git+https://github.com/namangoyal3/ccost
+pip install git+https://github.com/namangoyal3/tokenmaxxing
 ```
 
 ## What you get
@@ -220,7 +221,7 @@ with `*` in the report.
 `ccost` reads whatever is present and merges it. Use `--source` to scope to one agent.
 Codex reports a *cumulative* token count per session, so ccost takes each session's final
 total (never double-counting turns). OpenAI has no cache-write premium, so Codex cache
-columns are read-only. New source? [Open an issue](https://github.com/namangoyal3/ccost/issues) —
+columns are read-only. New source? [Open an issue](https://github.com/namangoyal3/tokenmaxxing/issues) —
 a source is one function that yields `Record`s.
 
 ## How it works

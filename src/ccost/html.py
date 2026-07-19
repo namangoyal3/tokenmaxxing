@@ -76,5 +76,5 @@ footer a{{color:var(--acc);text-decoration:none}}
 {_table("By project", _group(records, lambda r: r.project, overrides), "Project")}
 {_table("Daily", _group(records, lambda r: f"{r.ts:%Y-%m-%d}", overrides), "Date", reverse=False)}
 {_table("Monthly", _group(records, lambda r: f"{r.ts:%Y-%m}", overrides), "Month", reverse=False)}
-<footer>Made with <a href="https://github.com/namangoyal3/ccost">ccost</a> · prices are local estimates, not billed amounts</footer>
+<footer>Made with <a href="https://github.com/namangoyal3/tokenmaxxing">ccost</a> · prices are local estimates, not billed amounts</footer>
 </div></body></html>"""

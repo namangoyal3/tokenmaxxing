@@ -15,8 +15,8 @@ classifiers = [
 dependencies = ["rich>=13.0"]
 
 [project.urls]
-Homepage = "https://github.com/namangoyal3/ccost"
-Issues = "https://github.com/namangoyal3/ccost/issues"
+Homepage = "https://github.com/namangoyal3/tokenmaxxing"
+Issues = "https://github.com/namangoyal3/tokenmaxxing/issues"
 
 [project.scripts]
 ccost = "ccost.cli:main"
