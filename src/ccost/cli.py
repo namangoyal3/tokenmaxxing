@@ -9,10 +9,11 @@ from pathlib import Path
 
 from rich.console import Console
 
-from . import __version__, html, maxx, report
+from . import __version__, blocks, html, maxx, report
 from .parse import SOURCES, load_records
 
-COMMANDS = ("summary", "maxx", "daily", "monthly", "projects", "models", "sources", "html", "json")
+COMMANDS = ("summary", "maxx", "window", "calendar", "daily", "monthly",
+            "projects", "models", "sources", "html", "json")
 
 
 def _load_pricing(path: str | None) -> dict | None:
@@ -38,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="which agent's logs to read (default: all)")
     p.add_argument("--dir", type=Path, help="Claude projects dir (default: ~/.claude/projects)")
     p.add_argument("--days", type=int, help="only include the last N days")
+    p.add_argument("--limit", type=int, help="your token budget per 5-hour window (for `window`)")
     p.add_argument("--pricing", help="JSON file overriding model prices")
     p.add_argument("-o", "--out", help="output file for the html command (default: ccost-report.html)")
     p.add_argument("-v", "--version", action="version", version=f"ccost {__version__}")
@@ -70,6 +72,13 @@ def main(argv: list[str] | None = None) -> int:
         out = Path(args.out or "ccost-report.html")
         out.write_text(html.render(records, overrides))
         console.print(f"[green]Wrote[/] {out}  ({len(records):,} records)")
+        return 0
+
+    if args.command == "window":
+        blocks.print_window(console, records, overrides, limit=args.limit)
+        return 0
+    if args.command == "calendar":
+        blocks.print_calendar(console, records)
         return 0
 
     dispatch = {

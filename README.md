@@ -11,6 +11,7 @@
 </p>
 
 <p align="center">
+  <a href="#max-your-5-hour-window">5-hour window</a> ·
   <a href="#install">Install</a> ·
   <a href="#what-you-get">What you get</a> ·
   <a href="#the-cache-angle">The cache angle</a> ·
@@ -59,6 +60,44 @@ money went — across both agents at once. Nothing is uploaded.
 <sub>Real output from ~6,100 sessions across both agents. On a Max/Pro plan the Claude figures
 are equivalent-API-value estimates, not billed dollars — that number is the leverage your
 subscription is giving you. Locally-run models (Ollama, `:free`) are correctly counted as $0.</sub>
+
+## Max your 5-hour window
+
+Claude subscription limits reset on a rolling **5-hour window**. The trap isn't only hitting
+the wall — it's the opposite: finishing your window having used a fraction of the quota you
+already paid for. `ccost window` shows the live picture so you use it fully.
+
+```text
+╭──────────────── ccost window · 5-hour quota ────────────────╮
+│ Window   17:00 → 22:00   resets in 1h 01m                   │
+│ Used     ███░░░░░░░░░░░░░░░░░░  70.5M  (13% of your peak)    │
+│ Pace     295K/min → ~88.6M by reset (16%)                   │
+│ On pace to use less than half your window — push harder.    │
+╰─────────────────────────────────────────────────────────────╯
+  Recent windows (vs your peak window)
+  Jul 19 17:00   70.5M   ██░░░░░░░░░░░░░░░░ 13%
+  Jul 19 05:00  326.5M   ███████████░░░░░░░ 60%   ← your fullest
+  Jul 18 18:00    6.2M   ░░░░░░░░░░░░░░░░░░  1%    ← wasted window
+```
+
+- **Reset countdown** — exactly how long until the window rolls, so you front-load heavy work.
+- **Burn rate → projection** — where you'll land by reset, and whether that's leaving quota
+  unused or about to hit the wall.
+- **Per-window fill** — every past window scored, so you can see the ones you wasted.
+- The real per-plan cap is undisclosed and dynamic, so `ccost` measures against **your own
+  fullest window** by default. Know your budget? Pass `--limit TOKENS` for a true percentage.
+
+`ccost calendar` gives the contributions-style heatmap — which days you leaned in, which you
+left on the table.
+
+```text
+╭──────── ccost calendar · token usage heatmap ────────╮
+│ Mon ··········▁▁▁▁▁▁▅▅▅▅                              │
+│ Fri ········▁▁·▁▁▁▁████▇▇                             │
+│ Sun ······▁▁·▁▁▁▁▁▁▁▁▇▇▃▃▅▅                           │
+│ 44 active days · 8.9B tokens · busiest day 948.5M     │
+╰───────────────────────────────────────────────────────╯
+```
 
 ## Install
 
@@ -137,6 +176,8 @@ What it computes from your logs (not vibes):
 | Command | Shows |
 |---|---|
 | `ccost` | Headline summary + cache economics + source/model/project breakdown |
+| `ccost window` | Live 5-hour quota: used, burn rate, reset countdown, per-window fill |
+| `ccost calendar` | Contributions-style heatmap of daily token usage |
 | `ccost maxx` | Token-efficiency score + ranked, quantified ways to spend less |
 | `ccost daily` | Cost per day |
 | `ccost monthly` | Cost per month |
@@ -147,8 +188,8 @@ What it computes from your logs (not vibes):
 | `ccost json` | Dump every priced record as JSON |
 
 Flags: `--source claude\|codex\|all` (default all), `--days N` (last N days),
-`--dir PATH` (custom Claude log dir), `--pricing file.json` (override rates),
-`-o FILE` (html output path).
+`--limit TOKENS` (your per-window budget, for `window`), `--dir PATH` (custom Claude log
+dir), `--pricing file.json` (override rates), `-o FILE` (html output path).
 
 ## Pricing
 
