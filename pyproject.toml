@@ -1,6 +1,6 @@
 [project]
 name = "ccost"
-version = "0.2.0"
+version = "0.3.0"
 description = "See what your AI coding agents cost you — a fast, zero-config cost & cache-waste analyzer for Claude Code and Codex."
 readme = "README.md"
 license = "MIT"

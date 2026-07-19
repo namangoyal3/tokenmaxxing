@@ -9,10 +9,10 @@ from pathlib import Path
 
 from rich.console import Console
 
-from . import __version__, html, report
+from . import __version__, html, maxx, report
 from .parse import SOURCES, load_records
 
-COMMANDS = ("summary", "daily", "monthly", "projects", "models", "sources", "html", "json")
+COMMANDS = ("summary", "maxx", "daily", "monthly", "projects", "models", "sources", "html", "json")
 
 
 def _load_pricing(path: str | None) -> dict | None:
@@ -79,6 +79,7 @@ def main(argv: list[str] | None = None) -> int:
         "projects": report.print_projects,
         "models": report.print_models,
         "sources": report.print_sources,
+        "maxx": maxx.print_maxx,
     }
     dispatch[args.command](console, records, overrides)
     return 0

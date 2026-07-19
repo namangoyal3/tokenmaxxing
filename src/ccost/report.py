@@ -160,6 +160,7 @@ def print_summary(console: Console, records: list[Record], overrides) -> None:
         est = sorted(m for m in total.models if pricing.is_estimated(m, overrides))
         console.print(f"[dim]* estimated pricing for: {', '.join(est)} "
                       f"(no public rate; override with --pricing)[/]")
+    console.print("[dim]→ run [/][bold]ccost maxx[/][dim] to score your token efficiency and see how to spend less.[/]")
 
 
 def print_daily(console: Console, records: list[Record], overrides) -> None:

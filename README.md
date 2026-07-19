@@ -14,6 +14,7 @@
   <a href="#install">Install</a> ·
   <a href="#what-you-get">What you get</a> ·
   <a href="#the-cache-angle">The cache angle</a> ·
+  <a href="#tokenmaxxing">Tokenmaxxing</a> ·
   <a href="#commands">Commands</a> ·
   <a href="#pricing">Pricing</a>
 </p>
@@ -99,11 +100,44 @@ A low hit rate means long gaps between turns are expiring the 5-minute cache and
 *re-paying* to rebuild context you already had. That's a knob you can turn — and `ccost` is
 the only reader that shows you the knob.
 
+## Tokenmaxxing
+
+`ccost maxx` scores how efficiently you spend and ranks concrete ways to spend less —
+in dollars, so you fix the biggest thing first. It separates **reclaim** (waste you can
+confidently recover) from **lever** (bigger potential savings that need your judgment).
+
+```text
+╭──────────── ccost maxx · tokenmaxxing ────────────╮
+│ Token efficiency  A  (96/100)                     │
+│ Cache reuse 96%  ·  total spend $18,241            │
+╰───────────────────────────────────────────────────╯
+~$608 (3%) is reclaimable waste. Bigger structural levers below.
+
+  Move                       Impact    Type      How
+  Downshift claude-opus-4-8  $9,775    lever     $12,219 at Opus rates ≈ $2,443 on Sonnet.
+  Trim output                ~$626     lever     Output is 11% of spend, priced 4–5× input.
+  Batch one-shot sessions    $586      reclaim   142 sessions built cache they never read.
+  Kill idle-gap rebuilds     $21       reclaim   12 turns rebuilt the 5m cache after a >5min gap.
+```
+
+What it computes from your logs (not vibes):
+
+- **Idle-gap rebuilds** — turns that came after a >5-minute gap and re-paid to rebuild the
+  5-minute cache. Staying active or using the 1-hour cache turns that write back into a
+  0.1× read. *(Claude only — needs per-turn timestamps.)*
+- **Cold one-shot sessions** — sessions that built cache and never read it. Each short,
+  separate session re-pays the first-turn cache build; batching related work avoids it.
+- **Model downshift** — how much a model's spend would drop one tier down (Opus→Sonnet).
+  A what-if, not a promise: not every turn can downshift, but routing routine edits does.
+- **Output trim** — output tokens cost 4–5× input; your output share is the ceiling on
+  what terser prompts can save.
+
 ## Commands
 
 | Command | Shows |
 |---|---|
 | `ccost` | Headline summary + cache economics + source/model/project breakdown |
+| `ccost maxx` | Token-efficiency score + ranked, quantified ways to spend less |
 | `ccost daily` | Cost per day |
 | `ccost monthly` | Cost per month |
 | `ccost projects` | Cost per project |
