@@ -79,7 +79,7 @@ def _cache_write_cost(records: list[Record], overrides) -> float:
     return total
 
 
-def _breakdown_table(title: str, buckets: dict[str, Agg], key_header: str, sort_key_desc=True) -> Table:
+def _breakdown_table(title: str, buckets: dict[str, Agg], key_header: str, sort_by_cost=True) -> Table:
     t = Table(title=title, title_style="bold", header_style="bold cyan", expand=False)
     t.add_column(key_header, style="white", no_wrap=True)
     t.add_column("Cost", justify="right", style="green")
@@ -88,7 +88,11 @@ def _breakdown_table(title: str, buckets: dict[str, Agg], key_header: str, sort_
     t.add_column("Cache R", justify="right", style="dim")
     t.add_column("Cache W", justify="right", style="dim")
     t.add_column("Hit%", justify="right")
-    items = sorted(buckets.items(), key=lambda kv: kv[1].cost, reverse=sort_key_desc)
+    items = (
+        sorted(buckets.items(), key=lambda kv: kv[1].cost, reverse=True)
+        if sort_by_cost
+        else sorted(buckets.items())
+    )
     for name, a in items:
         hit = a.cache_hit_rate
         hit_style = "green" if hit >= 0.8 else "yellow" if hit >= 0.5 else "red"
@@ -166,12 +170,12 @@ def print_summary(console: Console, records: list[Record], overrides) -> None:
 
 def print_daily(console: Console, records: list[Record], overrides) -> None:
     buckets = _group(records, lambda r: f"{r.ts:%Y-%m-%d}", overrides)
-    console.print(_breakdown_table("Daily", buckets, "Date", sort_key_desc=False))
+    console.print(_breakdown_table("Daily", buckets, "Date", sort_by_cost=False))
 
 
 def print_monthly(console: Console, records: list[Record], overrides) -> None:
     buckets = _group(records, lambda r: f"{r.ts:%Y-%m}", overrides)
-    console.print(_breakdown_table("Monthly", buckets, "Month", sort_key_desc=False))
+    console.print(_breakdown_table("Monthly", buckets, "Month", sort_by_cost=False))
 
 
 def print_projects(console: Console, records: list[Record], overrides) -> None:

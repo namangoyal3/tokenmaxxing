@@ -8,8 +8,12 @@ from .parse import Record
 from .report import Agg, _cache_write_cost, _group, _money, _tokens, short_model
 
 
-def _rows(buckets: dict[str, Agg], reverse=True) -> str:
-    items = sorted(buckets.items(), key=lambda kv: kv[1].cost, reverse=reverse)
+def _rows(buckets: dict[str, Agg], sort_by_cost=True) -> str:
+    items = (
+        sorted(buckets.items(), key=lambda kv: kv[1].cost, reverse=True)
+        if sort_by_cost
+        else sorted(buckets.items())
+    )
     out = []
     for name, a in items:
         hit = a.cache_hit_rate * 100
@@ -23,11 +27,11 @@ def _rows(buckets: dict[str, Agg], reverse=True) -> str:
     return "\n".join(out)
 
 
-def _table(title: str, buckets: dict[str, Agg], key: str, reverse=True) -> str:
+def _table(title: str, buckets: dict[str, Agg], key: str, sort_by_cost=True) -> str:
     return f"""<section><h2>{_html.escape(title)}</h2><table>
 <thead><tr><th>{_html.escape(key)}</th><th>Cost</th><th>Input</th><th>Output</th>
 <th>Cache R</th><th>Cache W</th><th>Hit%</th></tr></thead>
-<tbody>{_rows(buckets, reverse)}</tbody></table></section>"""
+<tbody>{_rows(buckets, sort_by_cost)}</tbody></table></section>"""
 
 
 def render(records: list[Record], overrides) -> str:
@@ -74,7 +78,7 @@ footer a{{color:var(--acc);text-decoration:none}}
 {_table("By source", _group(records, lambda r: r.source, overrides), "Source") if len({r.source for r in records}) > 1 else ""}
 {_table("By model", _group(records, lambda r: short_model(r.model), overrides), "Model")}
 {_table("By project", _group(records, lambda r: r.project, overrides), "Project")}
-{_table("Daily", _group(records, lambda r: f"{r.ts:%Y-%m-%d}", overrides), "Date", reverse=False)}
-{_table("Monthly", _group(records, lambda r: f"{r.ts:%Y-%m}", overrides), "Month", reverse=False)}
+{_table("Daily", _group(records, lambda r: f"{r.ts:%Y-%m-%d}", overrides), "Date", sort_by_cost=False)}
+{_table("Monthly", _group(records, lambda r: f"{r.ts:%Y-%m}", overrides), "Month", sort_by_cost=False)}
 <footer>Made with <a href="https://github.com/namangoyal3/tokenmaxxing">ccost</a> · prices are local estimates, not billed amounts</footer>
 </div></body></html>"""

@@ -2,13 +2,14 @@ from datetime import datetime, timedelta, timezone
 
 from ccost import maxx
 from ccost.parse import Record
+from rich.console import Console
 
 
-def _rec(session, minutes, cw5m=0, cache_read=0, model="claude-sonnet-5"):
+def _rec(session, minutes, cw5m=0, cache_read=0, model="claude-sonnet-5", input_tokens=100):
     return Record(
         ts=datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(minutes=minutes),
         model=model, project="p", session=session, branch="",
-        input=100, output=10, cache_read=cache_read, cache_write_5m=cw5m, cache_write_1h=0,
+        input=input_tokens, output=10, cache_read=cache_read, cache_write_5m=cw5m, cache_write_1h=0,
     )
 
 
@@ -17,8 +18,8 @@ def test_idle_gap_waste_flags_rebuild_after_long_gap():
     recs = [_rec("s", 0, cw5m=50000), _rec("s", 10, cw5m=100000)]
     waste, turns = maxx.idle_gap_waste(recs, None)
     assert turns == 1
-    # 100000 * (3/1e6) * (1.25-0.10) = 0.345
-    assert round(waste, 3) == 0.345
+    # 100000 * (2/1e6) * (1.25-0.10) = 0.23
+    assert round(waste, 3) == 0.23
 
 
 def test_no_waste_when_turns_are_close():
@@ -39,3 +40,12 @@ def test_downshift_prefers_opus():
     model, cheaper, cur, low = maxx.best_downshift(recs, None)
     assert "opus" in model
     assert cur > low  # sonnet is cheaper
+
+
+def test_downshift_copy_names_the_actual_models():
+    console = Console(record=True, width=200)
+    maxx.print_maxx(console, [_rec("s", 0, input_tokens=1_000_000)], None)
+    output = console.export_text()
+    assert "$2.00 on claude-sonnet-5" in output
+    assert "$1.00 on claude-haiku-4-5" in output
+    assert "Opus rates" not in output

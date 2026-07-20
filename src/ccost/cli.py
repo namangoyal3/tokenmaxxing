@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -20,9 +21,32 @@ def _load_pricing(path: str | None) -> dict | None:
     if not path:
         return None
     try:
-        return json.loads(Path(path).read_text())
+        data = json.loads(Path(path).read_text())
     except (OSError, json.JSONDecodeError) as e:
         sys.exit(f"ccost: could not read pricing file {path!r}: {e}")
+    valid = isinstance(data, dict) and all(
+        isinstance(model, str)
+        and model
+        and isinstance(rates, dict)
+        and all(
+            isinstance(rates.get(key), (int, float))
+            and not isinstance(rates.get(key), bool)
+            and math.isfinite(rates[key])
+            and rates[key] >= 0
+            for key in ("input", "output")
+        )
+        for model, rates in data.items()
+    )
+    if not valid:
+        sys.exit(f"ccost: invalid pricing file {path!r}: expected nonnegative input and output rates")
+    return data
+
+
+def _positive_int(raw: str) -> int:
+    value = int(raw)
+    if value <= 0:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return value
 
 
 def _since(days: int | None) -> datetime | None:
@@ -38,8 +62,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--source", choices=(*SOURCES, "all"), default="all",
                    help="which agent's logs to read (default: all)")
     p.add_argument("--dir", type=Path, help="Claude projects dir (default: ~/.claude/projects)")
-    p.add_argument("--days", type=int, help="only include the last N days")
-    p.add_argument("--limit", type=int, help="your token budget per 5-hour window (for `window`)")
+    p.add_argument("--days", type=_positive_int, help="only include the last N days")
+    p.add_argument("--limit", type=_positive_int, help="your token budget per 5-hour window (for `window`)")
     p.add_argument("--pricing", help="JSON file overriding model prices")
     p.add_argument("-o", "--out", help="output file for the html command (default: ccost-report.html)")
     p.add_argument("-v", "--version", action="version", version=f"ccost {__version__}")
@@ -73,7 +97,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "html":
         out = Path(args.out or "ccost-report.html")
-        out.write_text(html.render(records, overrides))
+        try:
+            out.write_text(html.render(records, overrides))
+        except OSError as e:
+            sys.exit(f"ccost: could not write HTML report {str(out)!r}: {e}")
         console.print(f"[green]Wrote[/] {out}  ({len(records):,} records)")
         return 0
 

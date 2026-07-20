@@ -8,8 +8,8 @@ whether you're leaving quota on the table or about to hit the wall.
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta, timezone
 
 from rich.console import Console
 from rich.panel import Panel
@@ -27,7 +27,6 @@ class Block:
     last: datetime
     tokens: int = 0
     records: int = 0
-    cost_records: list = field(default_factory=list)
 
     @property
     def end(self) -> datetime:
@@ -156,7 +155,7 @@ def print_calendar(console: Console, records: list[Record], weeks: int = 15,
     if not records:
         console.print("[yellow]No usage found.[/]")
         return
-    daily: dict[datetime, int] = defaultdict(int)
+    daily: dict[date, int] = defaultdict(int)
     for r in records:
         daily[r.ts.date()] += r.total_tokens
     peak_day = max(daily.values(), default=1)

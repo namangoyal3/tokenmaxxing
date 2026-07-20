@@ -140,7 +140,8 @@ def print_maxx(console: Console, records: list[Record], overrides) -> None:
         model, cheaper, cur, low = shift
         moves.append((cur - low, f"Downshift {short_model(model)}",
                       _money(cur - low), "lever",
-                      f"{_money(cur)} at Opus rates ≈ {_money(low)} on Sonnet. "
+                      f"{_money(cur)} on {short_model(model)} ≈ "
+                      f"{_money(low)} on {short_model(cheaper)}. "
                       f"Route routine turns down a tier."))
     if output_cost > 0.01:
         share = output_cost / total.cost * 100 if total.cost else 0

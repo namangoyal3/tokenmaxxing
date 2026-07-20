@@ -1,8 +1,8 @@
 """Model pricing and cost computation for Claude Code usage records.
 
-Prices are USD per million tokens (MTok), standard tier, from Anthropic's
-public pricing. Cache rates follow Anthropic's documented multipliers of the
-base input rate:
+Prices are USD per million tokens (MTok), standard tier, from Anthropic and
+OpenAI public pricing. Cache rates follow the documented multipliers for the
+current models:
 
   - cache read              = 0.10 x input
   - cache write (5m TTL)    = 1.25 x input
@@ -25,14 +25,23 @@ CACHE_WRITE_1H_MULT = 2.00
 # longest pattern first, so "claude-3-5-haiku" hits "haiku" not a broad default.
 PRICING: dict[str, tuple[float, float]] = {
     # Anthropic (Claude Code)
+    "fable": (10.0, 50.0),
+    "mythos": (10.0, 50.0),
+    "opus-4-8": (5.0, 25.0),
+    "opus-4-7": (5.0, 25.0),
+    "opus-4-6": (5.0, 25.0),
+    "opus-4-5": (5.0, 25.0),
     "opus": (15.0, 75.0),
+    # ponytail: Sonnet 5 uses launch pricing through 2026-08-31; update it after that date.
+    "sonnet-5": (2.0, 10.0),
     "sonnet": (3.0, 15.0),
     "haiku": (1.0, 5.0),
-    # Fable 5 / Mythos 5 sit above Opus; no public price exists, so we estimate
-    # at Opus tier. Flagged as an estimate in reports. Override if you know better.
-    "fable": (15.0, 75.0),
-    "mythos": (15.0, 75.0),
     # OpenAI (Codex CLI)
+    "gpt-5.6-sol": (5.0, 30.0),
+    "gpt-5.6-terra": (2.5, 15.0),
+    "gpt-5.6-luna": (1.0, 6.0),
+    "gpt-5.5": (5.0, 30.0),
+    "gpt-5.3-codex": (1.75, 14.0),
     "gpt-5": (1.25, 10.0),
     "gpt-4.1": (2.0, 8.0),
     "gpt-4o": (2.5, 10.0),
@@ -50,14 +59,14 @@ FREE_PATTERNS = (
 # Used when a model matches nothing above. Sonnet-tier is the safe middle bet.
 FALLBACK = (3.0, 15.0)
 
-ESTIMATED_MODELS = ("fable", "mythos")
+ESTIMATED_MODELS: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
 class Rates:
     input: float  # per MTok
     output: float  # per MTok
-    estimated: bool  # True when the price is a guess (unknown or Fable/Mythos)
+    estimated: bool  # True when the price is a guess
 
 
 def rates_for(model: str, overrides: dict[str, dict] | None = None) -> Rates:

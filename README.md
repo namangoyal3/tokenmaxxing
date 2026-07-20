@@ -58,9 +58,8 @@ money went — across both agents at once. Nothing is uploaded.
 │ claude-sonnet-5  │    $606.51 │  838.9M │   59.7M │  93% │
 ```
 
-<sub>Real output from ~6,100 sessions across both agents. On a Max/Pro plan the Claude figures
-are equivalent-API-value estimates, not billed dollars — that number is the leverage your
-subscription is giving you. Locally-run models (Ollama, `:free`) are correctly counted as $0.</sub>
+<sub>This example uses a mixed Claude and Codex history. The Claude values estimate an equivalent API cost, not a billed amount.
+The command assigns a zero cost to local models, such as Ollama and `:free` models.</sub>
 
 ## Max your 5-hour window
 
@@ -168,7 +167,7 @@ confidently recover) from **lever** (bigger potential savings that need your jud
 ~$608 (3%) is reclaimable waste. Bigger structural levers below.
 
   Move                       Impact    Type      How
-  Downshift claude-opus-4-8  $9,775    lever     $12,219 at Opus rates ≈ $2,443 on Sonnet.
+  Downshift claude-opus-4-8  $7,331    lever     $12,219 on claude-opus-4-8 ≈ $4,888 on claude-sonnet-4-5.
   Trim output                ~$626     lever     Output is 11% of spend, priced 4–5× input.
   Batch one-shot sessions    $586      reclaim   142 sessions built cache they never read.
   Kill idle-gap rebuilds     $21       reclaim   12 turns rebuilt the 5m cache after a >5min gap.
@@ -209,17 +208,17 @@ dir), `--pricing file.json` (override rates), `-o FILE` (html output path).
 
 ## Pricing
 
-Prices are USD per million tokens, standard tier, baked in from Anthropic's public pricing.
-Cache rates use Anthropic's documented multipliers of the base input rate (read 0.10×,
-5-minute write 1.25×, 1-hour write 2.00×). **These are local estimates, not your billed
-amount** — Max/Pro plans are flat-rate, and prices drift. Override anything:
+Prices use the standard public tiers from Anthropic and OpenAI. The table stores USD per million tokens.
+Anthropic cache rates use the documented input multipliers: 0.10× for reads, 1.25× for 5-minute writes, and 2.00× for 1-hour writes.
+Sonnet 5 uses its introductory rate through August 31, 2026. **These values estimate API cost, not your billed amount.**
+Max and Pro plans use flat rates. Provider prices can change. Override a rate with this command:
 
 ```bash
 ccost --pricing my-prices.json
 ```
 
 ```json
-{ "opus": { "input": 15, "output": 75 }, "sonnet": { "input": 3, "output": 15 } }
+{ "fable": { "input": 10, "output": 50 }, "gpt-5.6-sol": { "input": 5, "output": 30 } }
 ```
 
 Models with no public rate (e.g. experimental ones) are priced by best estimate and marked
@@ -230,23 +229,24 @@ with `*` in the report.
 | Agent | Log location | Status |
 |---|---|---|
 | **Claude Code** | `~/.claude/projects/` (`CLAUDE_CONFIG_DIR`) | ✅ per-turn usage |
-| **Codex CLI** | `~/.codex/sessions/` (`CODEX_HOME`) | ✅ per-session totals |
+| **Codex CLI** | `~/.codex/sessions/` (`CODEX_HOME`) | ✅ per-event deltas |
 | Gemini CLI / Cursor / OpenCode | — | ❌ don't log per-request token usage locally |
 
-`ccost` reads whatever is present and merges it. Use `--source` to scope to one agent.
-Codex reports a *cumulative* token count per session, so ccost takes each session's final
-total (never double-counting turns). OpenAI has no cache-write premium, so Codex cache
-columns are read-only. New source? [Open an issue](https://github.com/namangoyal3/tokenmaxxing/issues) —
-a source is one function that yields `Record`s.
+`ccost` reads the available logs and merges the records. Use `--source` to select one agent.
+Codex reports cumulative token counts. `ccost` calculates each event delta to prevent double counts and preserve model changes.
+Codex logs expose cache reads but not cache writes. Thus, the Codex cache-write columns remain zero.
+Want another source? [Open an issue](https://github.com/namangoyal3/tokenmaxxing/issues).
 
 ## How it works
 
 1. Walk `~/.claude/projects/**/*.jsonl` and `~/.codex/sessions/**/rollout-*.jsonl`.
-2. Pull token usage from each assistant turn (Claude) or session total (Codex).
+2. Pull token usage from each Claude turn or Codex snapshot.
 3. Dedupe by message + request id — resumed sessions replay old turns.
-4. Price each record cache-aware, aggregate, render.
+4. Calculate each Codex cumulative counter delta.
+5. Apply the cache-aware price to each record.
+6. Aggregate the records and render the report.
 
-Pure local reads. No network. ~700 lines of Python.
+The command reads local files only. It does not use the network. The source contains approximately 1,000 lines of Python.
 
 ## License
 

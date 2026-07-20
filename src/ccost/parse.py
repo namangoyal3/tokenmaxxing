@@ -1,9 +1,12 @@
-"""Discover and parse Claude Code session logs into flat usage records.
+"""Discover and parse Claude Code and Codex logs into flat usage records.
 
 Claude Code writes one JSONL file per session under
 `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`. Each assistant turn
 carries a `message.usage` block. We extract those, dedupe repeated requests
 (resumed sessions replay earlier turns), and hand back plain dataclasses.
+
+Codex writes cumulative usage snapshots. We convert each snapshot to a delta
+so model changes and date filters remain accurate.
 """
 from __future__ import annotations
 
@@ -139,19 +142,17 @@ def _load_claude(root: Path, since: datetime | None) -> list[Record]:
     return out
 
 
-def _codex_record(file_path: Path) -> Record | None:
-    """One record per Codex rollout: its final (cumulative) token totals.
-
-    Codex writes a running `total_token_usage` on every turn, so we keep the
-    largest one — the session total — rather than summing turns.
-    """
+def _codex_records(file_path: Path) -> list[Record]:
+    """Convert Codex cumulative token snapshots into per-event deltas."""
     try:
         text = file_path.read_text(errors="replace")
     except OSError:
-        return None
+        return []
     meta_ts = meta_cwd = session_id = None
     model = "unknown"
-    best = None  # the total_token_usage dict with the most total_tokens
+    previous = (0, 0, 0)
+    out: list[Record] = []
+    leading: list[Record] = []
     for line in text.splitlines():
         line = line.strip()
         if not line:
@@ -163,6 +164,8 @@ def _codex_record(file_path: Path) -> Record | None:
         if not isinstance(obj, dict):
             continue
         payload = obj.get("payload") or {}
+        if not isinstance(payload, dict):
+            continue
         t = obj.get("type")
         if t == "session_meta":
             meta_ts = payload.get("timestamp") or obj.get("timestamp")
@@ -170,32 +173,50 @@ def _codex_record(file_path: Path) -> Record | None:
             session_id = payload.get("id")
         elif t == "turn_context" and payload.get("model"):
             model = payload["model"]
-        info = payload.get("info") if isinstance(payload, dict) else None
+            for rec in leading:
+                rec.model = model
+            leading.clear()
+        info = payload.get("info")
         if isinstance(info, dict):
             tu = info.get("total_token_usage")
             if isinstance(tu, dict):
-                if best is None or tu.get("total_tokens", 0) > best.get("total_tokens", 0):
-                    best = tu
-    if not best:
-        return None
-    ts = _parse_ts(meta_ts) or _parse_ts(None)
-    if ts is None:
-        return None
-    cached = int(best.get("cached_input_tokens", 0) or 0)
-    total_in = int(best.get("input_tokens", 0) or 0)
-    return Record(
-        ts=ts,
-        model=model,
-        project=(Path(meta_cwd).name if meta_cwd else "unknown"),
-        session=session_id or file_path.stem,
-        branch="",
-        input=max(total_in - cached, 0),  # OpenAI input_tokens includes cached
-        output=int(best.get("output_tokens", 0) or 0),
-        cache_read=cached,
-        cache_write_5m=0,  # OpenAI implicit caching has no write premium
-        cache_write_1h=0,
-        source="codex",
-    )
+                try:
+                    current = (
+                        int(tu.get("input_tokens", 0) or 0),
+                        int(tu.get("cached_input_tokens", 0) or 0),
+                        int(tu.get("output_tokens", 0) or 0),
+                    )
+                except (TypeError, ValueError):
+                    continue
+                deltas = tuple(now - before for now, before in zip(current, previous))
+                if any(delta < 0 for delta in deltas):
+                    # ponytail: Codex counters should only rise. A reset becomes the new baseline.
+                    previous = current
+                    continue
+                previous = current
+                if not any(deltas):
+                    continue
+                ts = _parse_ts(obj.get("timestamp")) or _parse_ts(meta_ts)
+                if ts is None:
+                    continue
+                total_in, cached, output = deltas
+                rec = Record(
+                    ts=ts,
+                    model=model,
+                    project=(Path(meta_cwd).name if meta_cwd else "unknown"),
+                    session=session_id or file_path.stem,
+                    branch="",
+                    input=max(total_in - cached, 0),  # OpenAI input_tokens includes cached
+                    output=output,
+                    cache_read=cached,
+                    cache_write_5m=0,  # Codex logs do not expose cache writes
+                    cache_write_1h=0,
+                    source="codex",
+                )
+                out.append(rec)
+                if model == "unknown":
+                    leading.append(rec)
+    return out
 
 
 def _load_codex(root: Path, since: datetime | None) -> list[Record]:
@@ -203,12 +224,7 @@ def _load_codex(root: Path, since: datetime | None) -> list[Record]:
     if not root.exists():
         return out
     for file_path in root.rglob("rollout-*.jsonl"):
-        rec = _codex_record(file_path)
-        if rec is None:
-            continue
-        if since and rec.ts < since:
-            continue
-        out.append(rec)
+        out.extend(rec for rec in _codex_records(file_path) if not since or rec.ts >= since)
     return out
 
 

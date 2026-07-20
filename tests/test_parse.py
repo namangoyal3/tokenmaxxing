@@ -27,5 +27,5 @@ def test_total_cost_matches_hand_math():
         pricing.cost_usd(r.model, r.input, r.output, r.cache_read, r.cache_write_5m, r.cache_write_1h)
         for r in recs
     )
-    # proj-a = 0.0321, proj-b haiku 1M input = 1.0
-    assert round(total, 4) == 1.0321
+    # proj-a = 0.0214, proj-b haiku 1M input = 1.0
+    assert round(total, 4) == 1.0214
