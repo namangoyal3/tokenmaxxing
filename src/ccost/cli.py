@@ -9,11 +9,11 @@ from pathlib import Path
 
 from rich.console import Console
 
-from . import __version__, blocks, html, maxx, report
+from . import __version__, blocks, html, maxx, report, schedule
 from .parse import SOURCES, load_records
 
 COMMANDS = ("summary", "maxx", "window", "calendar", "daily", "monthly",
-            "projects", "models", "sources", "html", "json")
+            "projects", "models", "sources", "html", "json", "schedule")
 
 
 def _load_pricing(path: str | None) -> dict | None:
@@ -47,7 +47,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    raw = sys.argv[1:] if argv is None else argv
+    if raw and raw[0] == "schedule":
+        return schedule.main(raw[1:])
+    args = build_parser().parse_args(raw)
     overrides = _load_pricing(args.pricing)
     sources = SOURCES if args.source == "all" else (args.source,)
     records = load_records(sources=sources, since=_since(args.days), claude_root=args.dir)

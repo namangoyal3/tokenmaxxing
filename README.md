@@ -100,6 +100,20 @@ left on the table.
 ╰───────────────────────────────────────────────────────╯
 ```
 
+## Schedule a prompt for the reset
+
+Run `schedule` after Claude or Codex reports a limit error:
+
+```bash
+schedule "Review this repository and fix the failing tests"
+```
+
+The command detects the active agent and reads its reset time from the local log.
+It waits five extra seconds for clock drift. It then starts the agent in the current directory.
+Keep the terminal process active until the command starts. Press Ctrl-C to cancel the prompt.
+
+Use `-` as the prompt to read a multi-line prompt from standard input.
+
 ## Install
 
 `ccost` runs with [`uv`](https://docs.astral.sh/uv/) — no clone, no virtualenv:
@@ -187,6 +201,7 @@ What it computes from your logs (not vibes):
 | `ccost sources` | Cost per agent (Claude Code vs Codex) |
 | `ccost html` | Write a shareable `ccost-report.html` |
 | `ccost json` | Dump every priced record as JSON |
+| `schedule PROMPT` | Run one prompt after the active agent limit resets |
 
 Flags: `--source claude\|codex\|all` (default all), `--days N` (last N days),
 `--limit TOKENS` (your per-window budget, for `window`), `--dir PATH` (custom Claude log

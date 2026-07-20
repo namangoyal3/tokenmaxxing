@@ -20,6 +20,7 @@ Issues = "https://github.com/namangoyal3/tokenmaxxing/issues"
 
 [project.scripts]
 ccost = "ccost.cli:main"
+schedule = "ccost.schedule:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6"]
